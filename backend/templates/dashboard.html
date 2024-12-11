@@ -4,98 +4,212 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
             padding: 20px;
         }
-
-        h1 {
-            text-align: center;
-            color: #333;
+        .user-card {
+            background-color: #fff;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
+        .user-card h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .user-card .kpis {
+            margin-top: 15px;
+        }
         table {
             width: 100%;
-            margin: 20px 0;
             border-collapse: collapse;
-            background-color: #fff;
+            margin-top: 20px;
         }
-
+        table, th, td {
+            border: 1px solid #ddd;
+            text-align: center;
+        }
         th, td {
             padding: 12px;
-            text-align: center;
-            border: 1px solid #ddd;
         }
-
         th {
+            background-color: #f4f4f9;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 10px;
             background-color: #4CAF50;
             color: white;
         }
-
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
-        tr:hover {
-            background-color: #ddd;
-        }
-
-        ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-
-        li {
-            padding: 5px;
-        }
-
-        /* Optional: add some responsive design */
-        @media screen and (max-width: 600px) {
-            table {
-                font-size: 12px;
-            }
-
-            th, td {
-                padding: 8px;
-            }
+        canvas {
+            margin-top: 30px;
+            max-width: 100%;
+            height: 200px;  /* Making the chart smaller */
         }
     </style>
 </head>
 <body>
+
+<header>
     <h1>User Dashboard</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Username</th>
-                <th>Language</th>
-                <th>Last Login</th>
-                <th>Total Time Spent</th>
-                <th>Tasks</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.user_id }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.language }}</td>
-                <td>{{ user.last_login }}</td>
-                <td>{{ user.metrics.total_time_spent }}</td>
-                <td>
-                    <ul>
-                        {% for task in user.tasks %}
-                        <li>{{ task.task_name }} - {% if task.task_completed %}Completed{% else %}Pending{% endif %}</li>
-                        {% endfor %}
-                    </ul>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+</header>
+
+<div class="container">
+    <!-- Only display the selected user’s KPIs -->
+    <div class="user-card">
+        <h2>{{ user.username }}</h2>
+        <p><strong>User ID:</strong> {{ user.user_id }}</p>
+        <p><strong>Language:</strong> {{ user.language }}</p>
+        <p><strong>Last Login:</strong> {{ user.last_login }}</p>
+
+        <!-- KPIs Table -->
+        <h3>Key Performance Indicators (KPIs)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Task Completion Rate</td>
+                    <td>{{ user.kpis.task_completion_rate }}%</td>
+                </tr>
+                <tr>
+                    <td>Average Accuracy</td>
+                    <td>{{ user.kpis.average_accuracy }}%</td>
+                </tr>
+                <tr>
+                    <td>Total Engagement Duration</td>
+                    <td>{{ user.kpis.total_engagement_duration }} seconds</td>
+                </tr>
+                <tr>
+                    <td>Correct Responses</td>
+                    <td>{{ user.kpis.correct_vs_incorrect[0] }}</td>
+                </tr>
+                <tr>
+                    <td>Incorrect Responses</td>
+                    <td>{{ user.kpis.correct_vs_incorrect[1] }}</td>
+                </tr>
+                <tr>
+                    <td>Average Time Per Task</td>
+                    <td>{{ user.kpis.average_time_per_task }} seconds</td>
+                </tr>
+                <tr>
+                    <td>Time Since Last Login</td>
+                    <td>{{ user.kpis.time_since_last_login }} days</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- KPIs Bar Graphs -->
+        <h3>Visual Representation of KPIs</h3>
+        <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+            <!-- Bar Chart for Task Completion Rate -->
+            <div style="width: 45%; padding: 10px;">
+                <canvas id="completionRateChart{{ user.user_id }}"></canvas>
+                <script>
+                    var ctx = document.getElementById('completionRateChart{{ user.user_id }}').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Task Completion Rate'],
+                            datasets: [{
+                                label: 'Performance (%)',
+                                data: [{{ user.kpis.task_completion_rate }}],
+                                backgroundColor: '#4CAF50',
+                                borderColor: '#4CAF50',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+
+            <!-- Bar Chart for Average Accuracy -->
+            <div style="width: 45%; padding: 10px;">
+                <canvas id="accuracyChart{{ user.user_id }}"></canvas>
+                <script>
+                    var ctx = document.getElementById('accuracyChart{{ user.user_id }}').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Average Accuracy'],
+                            datasets: [{
+                                label: 'Performance (%)',
+                                data: [{{ user.kpis.average_accuracy }}],
+                                backgroundColor: '#FF9800',
+                                borderColor: '#FF9800',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- Bar Chart for Correct vs Incorrect Responses -->
+        <div style="width: 45%; padding: 10px; margin-top: 20px;">
+            <canvas id="correctIncorrectChart{{ user.user_id }}"></canvas>
+            <script>
+                var ctx = document.getElementById('correctIncorrectChart{{ user.user_id }}').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Correct', 'Incorrect'],
+                        datasets: [{
+                            label: 'Responses',
+                            data: [{{ user.kpis.correct_vs_incorrect[0] }}, {{ user.kpis.correct_vs_incorrect[1] }}],
+                            backgroundColor: ['#4CAF50', '#FF9800'],
+                            borderColor: ['#4CAF50', '#FF9800'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    });
+                </script>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
